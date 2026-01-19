@@ -5,9 +5,13 @@ local config = require('subjoyer.config')
 local websocket = require('subjoyer.websocket')
 local display = require('subjoyer.display')
 local renderer = require('subjoyer.renderer')
+local asbplayer = require('subjoyer.asbplayer')
 
 -- Plugin state
 M.is_started = false
+M.asbplayer_started = false
+M.current_subtitle = nil -- Store current subtitle for mining
+M.subtitle_history = {} -- Store recent subtitles for context
 
 -- Setup plugin with user configuration
 function M.setup(user_config)
@@ -24,11 +28,12 @@ function M.setup(user_config)
 
   -- Setup callbacks
   M.setup_callbacks()
+  M.setup_asbplayer_callbacks()
 
   -- Setup autocommands
   M.setup_autocommands()
 
-  -- Auto-start if configured
+  -- Auto-start if configured (this will also start asbplayer if enabled)
   if cfg.behavior.auto_start then
     vim.defer_fn(function()
       M.start()
@@ -82,6 +87,41 @@ function M.setup_callbacks()
   end)
 end
 
+-- Setup asbplayer callbacks
+function M.setup_asbplayer_callbacks()
+  local cfg = config.get()
+
+  asbplayer.on('ready', function(data)
+    if cfg.asbplayer and cfg.asbplayer.debug then
+      vim.notify('[subjoyer:asbplayer] Server ready at ' .. (data.url or 'ws://127.0.0.1:8766/ws'), vim.log.levels.INFO)
+    end
+  end)
+
+  asbplayer.on('connected', function(data)
+    if cfg.asbplayer and cfg.asbplayer.debug then
+      vim.notify('[subjoyer:asbplayer] asbplayer connected: ' .. (data.client or 'unknown'), vim.log.levels.INFO)
+    end
+  end)
+
+  asbplayer.on('disconnected', function(_)
+    if cfg.asbplayer and cfg.asbplayer.debug then
+      vim.notify('[subjoyer:asbplayer] asbplayer disconnected', vim.log.levels.INFO)
+    end
+  end)
+
+  asbplayer.on('error', function(error_msg)
+    if cfg.asbplayer and cfg.asbplayer.debug then
+      vim.notify('[subjoyer:asbplayer] Error: ' .. error_msg, vim.log.levels.ERROR)
+    end
+  end)
+
+  asbplayer.on('response', function(response)
+    if cfg.asbplayer and cfg.asbplayer.debug then
+      vim.notify('[subjoyer:asbplayer] Response: ' .. vim.inspect(response), vim.log.levels.INFO)
+    end
+  end)
+end
+
 -- Setup autocommands
 function M.setup_autocommands()
   local cfg = config.get()
@@ -121,6 +161,15 @@ end
 function M.handle_subtitle(data)
   local cfg = config.get()
 
+  -- Store current subtitle for mining
+  M.current_subtitle = data
+
+  -- Store in history for context (keep last 10)
+  table.insert(M.subtitle_history, 1, data)
+  if #M.subtitle_history > 10 then
+    table.remove(M.subtitle_history)
+  end
+
   -- Check if updates should be paused
   if cfg.video.pause_updates and data.video and data.video.paused then
     return
@@ -141,8 +190,13 @@ function M.start()
 
   local cfg = config.get()
 
-  -- Start WebSocket server
+  -- Start WebSocket server for subtitle reception
   websocket.start(cfg)
+
+  -- Start asbplayer server if enabled
+  if cfg.asbplayer and cfg.asbplayer.enabled then
+    M.start_asbplayer()
+  end
 
   -- Show display
   if cfg.display.enabled then
@@ -160,6 +214,11 @@ function M.stop()
 
   -- Stop WebSocket server
   websocket.stop()
+
+  -- Stop asbplayer server if running
+  if M.asbplayer_started then
+    M.stop_asbplayer()
+  end
 
   -- Hide display
   display.hide()
@@ -205,7 +264,7 @@ function M.status()
   }
 end
 
--- Print status
+-- Print status (includes asbplayer if enabled)
 function M.print_status()
   local status = M.status()
   local cfg = config.get()
@@ -216,9 +275,19 @@ function M.print_status()
     '  Server: ' .. (status.server_running and 'Running' or 'Stopped'),
     '  Display: ' .. (status.display_visible and 'Visible' or 'Hidden'),
     '  Connection: ' .. cfg.connection.host .. ':' .. cfg.connection.port,
-    '  Job ID: ' .. (status.job_id or 'none'),
-    '  Reconnects: ' .. status.reconnect_count,
   }
+
+  -- Add asbplayer status if enabled
+  if cfg.asbplayer and cfg.asbplayer.enabled then
+    local asp_status = M.asbplayer_status()
+    table.insert(lines, '')
+    table.insert(lines, 'asbplayer Integration:')
+    table.insert(lines, '  Server: ' .. (asp_status.server_running and 'Running' or 'Stopped'))
+    table.insert(lines, '  Client: ' .. (asp_status.client_connected and 'Connected' or 'Disconnected'))
+    if asp_status.pending_requests > 0 then
+      table.insert(lines, '  Pending: ' .. asp_status.pending_requests)
+    end
+  end
 
   vim.notify(table.concat(lines, '\n'), vim.log.levels.INFO)
 end
@@ -301,6 +370,140 @@ function M.toggle_debug()
   })
 
   vim.notify('[subjoyer] Debug: ' .. (new_debug and 'ON' or 'OFF'), vim.log.levels.INFO)
+end
+
+-- Start asbplayer WebSocket server
+function M.start_asbplayer()
+  if M.asbplayer_started then
+    return
+  end
+
+  local cfg = config.get()
+
+  if not cfg.asbplayer or not cfg.asbplayer.enabled then
+    vim.notify('[subjoyer] asbplayer integration not enabled in config', vim.log.levels.WARN)
+    return
+  end
+
+  -- Start asbplayer server
+  asbplayer.start(cfg)
+  M.asbplayer_started = true
+end
+
+-- Stop asbplayer WebSocket server
+function M.stop_asbplayer()
+  if not M.asbplayer_started then
+    return
+  end
+
+  asbplayer.stop()
+  M.asbplayer_started = false
+end
+
+-- Build Anki fields from subtitle data
+local function build_anki_fields(subtitle_data, cfg)
+  if not subtitle_data or not subtitle_data.subtitle then
+    return nil
+  end
+
+  local fields = {}
+  local template_fields = cfg.asbplayer.anki.fields or {}
+
+  -- Get current subtitle text
+  local text = subtitle_data.subtitle.text or ''
+
+  -- Build context from history
+  local context_before = cfg.asbplayer.anki.context_lines_before or 1
+  local context_after = cfg.asbplayer.anki.context_lines_after or 1
+  local context_lines = {}
+
+  -- Add lines before (from history)
+  for i = 2, math.min(context_before + 1, #M.subtitle_history) do
+    local prev = M.subtitle_history[i]
+    if prev and prev.subtitle and prev.subtitle.text then
+      table.insert(context_lines, 1, prev.subtitle.text)
+    end
+  end
+
+  -- Add current line
+  table.insert(context_lines, '>> ' .. text .. ' <<')
+
+  -- Note: context_after would require future subtitles (not available yet)
+
+  local context = table.concat(context_lines, '\n')
+
+  -- Process each field template
+  for field_name, field_template in pairs(template_fields) do
+    local value = field_template
+    -- Replace template variables
+    value = value:gsub('{text}', text)
+    value = value:gsub('{context}', context)
+    -- Add more template variables as needed
+    fields[field_name] = value
+  end
+
+  return fields
+end
+
+-- Mine current subtitle to Anki
+function M.mine_anki()
+  local cfg = config.get()
+
+  -- Check if asbplayer is enabled and running
+  if not cfg.asbplayer or not cfg.asbplayer.enabled then
+    vim.notify('[subjoyer] asbplayer integration not enabled', vim.log.levels.ERROR)
+    return
+  end
+
+  if not M.asbplayer_started then
+    vim.notify('[subjoyer] asbplayer server not running. Use :SubjoyerStartAsbplayer', vim.log.levels.ERROR)
+    return
+  end
+
+  local status = asbplayer.status()
+  if not status.is_connected then
+    vim.notify('[subjoyer] asbplayer not connected. Enable WebSocket client in asbplayer extension settings.', vim.log.levels.ERROR)
+    return
+  end
+
+  -- Check if we have a current subtitle
+  if not M.current_subtitle then
+    vim.notify('[subjoyer] No subtitle to mine', vim.log.levels.WARN)
+    return
+  end
+
+  -- Build Anki fields
+  local fields = build_anki_fields(M.current_subtitle, cfg)
+  if not fields then
+    vim.notify('[subjoyer] Failed to build Anki fields', vim.log.levels.ERROR)
+    return
+  end
+
+  -- Get post-mine action
+  local post_mine_action = cfg.asbplayer.anki.post_mine_action or 0
+
+  -- Send mine-subtitle command
+  vim.notify('[subjoyer] Mining to Anki...', vim.log.levels.INFO)
+  asbplayer.mine_subtitle(fields, post_mine_action, function(response)
+    if response.error then
+      vim.notify('[subjoyer] Anki mining failed: ' .. response.error, vim.log.levels.ERROR)
+    elseif response.body and response.body.published then
+      vim.notify('[subjoyer] Anki note created successfully!', vim.log.levels.INFO)
+    else
+      vim.notify('[subjoyer] Anki note created (status unknown)', vim.log.levels.INFO)
+    end
+  end)
+end
+
+-- Get asbplayer status
+function M.asbplayer_status()
+  local status = asbplayer.status()
+  return {
+    server_started = M.asbplayer_started,
+    server_running = status.is_running,
+    client_connected = status.is_connected,
+    pending_requests = status.pending_count,
+  }
 end
 
 return M

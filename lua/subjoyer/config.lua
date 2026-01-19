@@ -120,6 +120,36 @@ M.defaults = {
 		show_time = false,
 		pause_updates = false,
 	},
+
+	-- asbplayer integration
+	asbplayer = {
+		enabled = false, -- Enable asbplayer WebSocket server
+		host = '127.0.0.1',
+		port = 8766,
+		debug = false,
+
+		-- Anki note creation
+		anki = {
+			fields = {
+				['Sentence'] = '{text}', -- Current subtitle text
+				['Context'] = '{context}', -- Surrounding lines
+				['Source'] = 'subjoyer', -- Source name
+			},
+			post_mine_action = 0, -- 0=continue, 1=pause, 2=rewind
+			context_lines_before = 1, -- Number of lines before for context
+			context_lines_after = 1, -- Number of lines after for context
+		},
+	},
+
+	-- lualine integration (alternative to incline.nvim)
+	lualine = {
+		enabled = false, -- Enable lualine component
+		section = 'c', -- Which section to use (a, b, c, x, y, z)
+		format = '{text}', -- Format string
+		max_length = 80, -- Max text length
+		show_icon = true, -- Show icon prefix
+		icon = '📺', -- Icon to use
+	},
 }
 
 -- Current active configuration

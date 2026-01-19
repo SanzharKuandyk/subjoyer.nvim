@@ -192,6 +192,11 @@ function M.is_visible_func()
   return M.is_visible
 end
 
+-- Get current subtitle state (for lualine integration)
+function M.get_state()
+  return M.current_subtitle
+end
+
 -- Setup incline.nvim integration
 function M.setup(config)
   local ok, incline = pcall(require, 'incline')

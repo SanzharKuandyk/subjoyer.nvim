@@ -152,13 +152,8 @@ require('subjoyer').setup({
 :SubjoyerStart           " Start receiving subtitles
 :SubjoyerStop            " Stop and cleanup
 :SubjoyerToggle          " Toggle on/off
-:SubjoyerShow            " Show subtitle bar
-:SubjoyerHide            " Hide subtitle bar
 :SubjoyerStatus          " Show connection status
-:SubjoyerReconnect       " Force reconnect
-:SubjoyerSetTrack <n>    " Change track filter (0, 1, 'all')
-:SubjoyerSetPosition <p> " Change position (top, bottom)
-:SubjoyerDebug           " Toggle debug mode
+:SubjoyerMineAnki        " Mine this line via absplayer's AnkiConnect (is not working yet)
 ```
 
 ### Workflow
@@ -167,8 +162,6 @@ require('subjoyer').setup({
 2. Run `:SubjoyerStart`
 3. Play a video with asbplayer in Chrome
 4. Subtitles appear in the bar at bottom/top of your editor
-5. Use `:SubjoyerSetTrack 1` to switch tracks
-6. Use `:SubjoyerSetPosition top` to move above statusline
 
 ## Configuration Examples
 
@@ -358,18 +351,6 @@ pip install websockets
 
 1. Verify asbplayer is active and subtitles are loaded
 2. Run `:SubjoyerStatus` to check connection
-3. Try `:SubjoyerReconnect`
-4. Enable debug mode: `:SubjoyerDebug`
-
-### Wrong track showing
-
-Use `:SubjoyerSetTrack` to change:
-
-```vim
-:SubjoyerSetTrack 0     " Show track 0
-:SubjoyerSetTrack 1     " Show track 1
-:SubjoyerSetTrack all   " Show all tracks
-```
 
 ### Bar not visible
 
