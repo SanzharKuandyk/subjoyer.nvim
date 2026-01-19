@@ -396,5 +396,6 @@ MIT
 
 ## Credits
 
+- Written by Claude (Anthropic) and examined by a human
 - Built for use with [asbplayer-streamer](https://github.com/SanzharKuandyk/asbplayer-subtitle-streamer)
 - Uses [incline.nvim](https://github.com/b0o/incline.nvim) for statusline integration
