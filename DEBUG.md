@@ -32,7 +32,7 @@ Should show:
 ```
 
 You should see notifications:
-- `[subjoyer] Server ready on localhost:8766`
+- `[subjoyer] Server ready on localhost:8767`
 - `[subjoyer] Extension connected (v1.0.0)`
 
 ### 4. Check status again

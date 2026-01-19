@@ -6,7 +6,7 @@ M.defaults = {
 	-- Connection settings
 	connection = {
 		host = "localhost",
-		port = 8766,
+		port = 8767,
 		reconnect = true,
 		reconnect_delay = 3000, -- ms
 		max_reconnects = 3, -- 0 = unlimited
@@ -170,8 +170,8 @@ local function validate_config(config)
 
 	-- Validate port
 	if config.connection.port < 1 or config.connection.port > 65535 then
-		vim.notify(string.format("Invalid port: %d. Using 8766.", config.connection.port), vim.log.levels.WARN)
-		config.connection.port = 8766
+		vim.notify(string.format("Invalid port: %d. Using 8767.", config.connection.port), vim.log.levels.WARN)
+		config.connection.port = 8767
 	end
 
 	return config

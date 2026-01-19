@@ -66,7 +66,7 @@ Make sure incline.nvim is installed (see installation above).
 
 Follow the instructions at [asbplayer-streamer](https://github.com/SanzharKuandyk/asbplayer-subtitle-streamer).
 
-Configure the extension to use **WebSocket** transport on **port 8766** (default).
+Configure the extension to use **WebSocket** transport on **port 8767** (default).
 
 ### 4. Configure Neovim
 
@@ -85,7 +85,7 @@ require('subjoyer').setup({
   -- Connection settings
   connection = {
     host = 'localhost',
-    port = 8766,
+    port = 8767,
     reconnect = true,
     reconnect_delay = 3000,
     max_reconnects = 3,
@@ -249,7 +249,7 @@ require('subjoyer').setup({
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `host` | string | `'localhost'` | WebSocket server host |
-| `port` | number | `8766` | WebSocket server port |
+| `port` | number | `8767` | WebSocket server port |
 | `reconnect` | boolean | `true` | Auto-reconnect on disconnect |
 | `reconnect_delay` | number | `3000` | Delay before reconnect (ms) |
 | `max_reconnects` | number | `3` | Max reconnection attempts (0 = unlimited) |
@@ -349,10 +349,10 @@ pip install websockets
 ### Extension not connecting
 
 1. Check extension is configured for WebSocket transport
-2. Verify port is 8766 (default)
+2. Verify port is 8767 (default)
 3. Run `:SubjoyerStatus` to check server status
 4. Run `:SubjoyerDebug` to enable debug logging
-5. Check for port conflicts: `netstat -an | grep 8766`
+5. Check for port conflicts: `netstat -an | grep 8767`
 
 ### Subtitles not appearing
 

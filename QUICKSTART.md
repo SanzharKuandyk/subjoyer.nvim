@@ -29,7 +29,7 @@ Add to your `init.lua` or plugin manager:
 
 1. Open extension settings in Chrome
 2. Set transport to **WebSocket**
-3. Set URL to `ws://localhost:8766`
+3. Set URL to `ws://localhost:8767`
 4. Click "Save Settings"
 5. Click "Test Connection" (should turn green)
 
@@ -130,7 +130,7 @@ Make sure incline.nvim is installed as a dependency in your plugin manager.
 
 ### Port conflict
 
-If port 8766 is in use, change it:
+If port 8767 is in use, change it:
 
 ```lua
 require('subjoyer').setup({

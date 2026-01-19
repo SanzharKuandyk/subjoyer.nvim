@@ -77,7 +77,7 @@ async def handle_client(websocket):
 async def main():
     """Start WebSocket server"""
     host = "localhost"
-    port = 8766
+    port = 8767
 
     print(f"\n{'='*60}")
     print(f"  Verbose WebSocket Test Server")
@@ -87,7 +87,7 @@ async def main():
     print("Steps:")
     print("  1. Make sure asbplayer-streamer extension is configured:")
     print("     - Transport: WebSocket")
-    print("     - URL: ws://localhost:8766")
+    print("     - URL: ws://localhost:8767")
     print("  2. Open a video (YouTube, Netflix, etc.)")
     print("  3. Load subtitles in asbplayer")
     print("  4. Play the video")

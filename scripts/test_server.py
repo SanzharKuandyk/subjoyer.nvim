@@ -8,7 +8,7 @@ Requirements: pip install websockets
 Usage:
     python test_server.py
 
-Then configure asbplayer-streamer extension to connect to ws://localhost:8766
+Then configure asbplayer-streamer extension to connect to ws://localhost:8767
 """
 
 import asyncio
@@ -70,7 +70,7 @@ async def handle_client(websocket):
 async def main():
     """Start WebSocket server"""
     host = 'localhost'
-    port = 8766
+    port = 8767
 
     print("=" * 60)
     print("  subjoyer.nvim - WebSocket Server Test")
@@ -79,7 +79,7 @@ async def main():
     print("\nNext steps:")
     print("  1. Configure asbplayer-streamer extension:")
     print("     - Set transport to 'WebSocket'")
-    print("     - Set URL to 'ws://localhost:8766'")
+    print("     - Set URL to 'ws://localhost:8767'")
     print("  2. Play a video with asbplayer")
     print("  3. Watch subtitles appear here!")
     print("\n" + "=" * 60)

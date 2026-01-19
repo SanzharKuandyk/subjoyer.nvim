@@ -26,7 +26,7 @@ if sys.platform == 'win32':
 
 
 class SubtitleWebSocketServer:
-    def __init__(self, host: str = 'localhost', port: int = 8766):
+    def __init__(self, host: str = 'localhost', port: int = 8767):
         self.host = host
         self.port = port
         self.server: Optional[websockets.WebSocketServer] = None
@@ -114,7 +114,7 @@ def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(description='WebSocket server for subjoyer.nvim')
     parser.add_argument('--host', default='localhost', help='Host to bind to')
-    parser.add_argument('--port', type=int, default=8766, help='Port to bind to')
+    parser.add_argument('--port', type=int, default=8767, help='Port to bind to')
     args = parser.parse_args()
 
     server = SubtitleWebSocketServer(host=args.host, port=args.port)
