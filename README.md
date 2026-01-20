@@ -1,23 +1,34 @@
 # subjoyer.nvim
 
-Display live subtitles from [asbplayer-streamer](https://github.com/SanzharKuandyk/asbplayer-subtitle-streamer) as a sleek statusline bar in Neovim using [incline.nvim](https://github.com/b0o/incline.nvim). Perfect for language learning, watching videos while coding, or any workflow where you want subtitles visible in your editor.
+Display live subtitles from [asbplayer-streamer](https://github.com/SanzharKuandyk/asbplayer-subtitle-streamer) as a sleek floating bar in Neovim. Perfect for language learning, watching videos while coding, or any workflow where you want subtitles visible in your editor.
 
 ## Features
 
-- **✨ Statusline Bar Display** - Full-width subtitle bar using incline.nvim
-- **🎯 Highly Configurable** - Position, colors, tracks, formatting
+- **✨ Floating Bar Display** - Full-width subtitle bar using nui.nvim (persistent across editor)
+- **🎯 Highly Configurable** - Position, size, colors, tracks, formatting
 - **🔄 Multi-track Support** - Show one or multiple subtitle tracks
 - **🔌 Auto-reconnect** - Handles connection drops gracefully
 - **⚡ Non-blocking** - Python WebSocket server runs in background
 - **🎨 Customizable Colors** - Match your colorscheme
-- **📺 Minimal Dependencies** - Just Python 3.7+, websockets, and incline.nvim
+- **📺 Minimal Dependencies** - Just Python 3.7+, websockets, and nui.nvim
+
+## Display Providers
+
+subjoyer supports two display providers:
+
+| Provider | Persistence | Behavior |
+|----------|-------------|----------|
+| **nui** (default) | Persistent | Floating window stays visible across all buffers and windows |
+| **incline** | Per-buffer | Only shows when a buffer/window is present |
+
+Choose **nui** if you want the subtitle bar always visible at the screen edge. Choose **incline** if you prefer the bar to attach to individual window statuslines.
 
 ## Requirements
 
 - Neovim 0.8+
 - Python 3.7+
 - `websockets` library: `pip install websockets`
-- **[incline.nvim](https://github.com/b0o/incline.nvim)** (required)
+- **[nui.nvim](https://github.com/MunifTanjim/nui.nvim)** (required for nui display)
 - [asbplayer-streamer](https://github.com/SanzharKuandyk/asbplayer-subtitle-streamer) Chrome extension
 
 ## Installation
@@ -28,7 +39,8 @@ Display live subtitles from [asbplayer-streamer](https://github.com/SanzharKuand
 {
   'SanzharKuandyk/subjoyer.nvim',
   dependencies = {
-    'b0o/incline.nvim', -- Required dependency
+    'MunifTanjim/nui.nvim', -- Required for nui display (default)
+    'b0o/incline.nvim',     -- Optional: for incline display
   },
   config = function()
     require('subjoyer').setup()
@@ -42,7 +54,8 @@ Display live subtitles from [asbplayer-streamer](https://github.com/SanzharKuand
 use {
   'SanzharKuandyk/subjoyer.nvim',
   requires = {
-    'b0o/incline.nvim', -- Required
+    'MunifTanjim/nui.nvim', -- Required for nui display (default)
+    'b0o/incline.nvim',     -- Optional: for incline display
   },
   config = function()
     require('subjoyer').setup()
@@ -58,9 +71,9 @@ use {
 pip install websockets
 ```
 
-### 2. Install incline.nvim
+### 2. Install nui.nvim
 
-Make sure incline.nvim is installed (see installation above).
+Make sure nui.nvim is installed (see installation above).
 
 ### 3. Install asbplayer-streamer extension
 
@@ -94,6 +107,7 @@ require('subjoyer').setup({
   -- Display settings
   display = {
     enabled = true,
+    provider = { nui = true, incline = false }, -- nui (persistent) or incline (per-buffer)
   },
 
   -- Subtitle settings
@@ -114,24 +128,21 @@ require('subjoyer').setup({
     prefix_fg = '#a6e3a1',
   },
 
-  -- Incline.nvim bar options
-  incline = {
+  -- nui.nvim window options (persistent across editor)
+  nui = {
     prefix = '📺 ',
     separator = ' • ',
-    show_timestamp = true,
-    show_track_label = true,
-    max_text_length = 100,
 
-    -- Position: 'top' = above statusline, 'bottom' = below statusline
-    options = {
-      window = {
-        placement = {
-          horizontal = 'center', -- 'left', 'center', 'right'
-          vertical = 'bottom',   -- 'top' or 'bottom'
-        },
-        margin = { horizontal = 0, vertical = 1 },
-        padding = { left = 2, right = 2 },
+    -- Window position and size
+    window = {
+      placement = {
+        horizontal = 'center', -- 'left', 'center', 'right'
+        vertical = 'bottom',   -- 'top', 'bottom'
       },
+      width = '80%',           -- columns or "80%" of screen width
+      height = 3,              -- height in lines (supports text wrapping)
+      margin = { horizontal = 0, vertical = 1 },
+      zindex = 100,
     },
   },
 
@@ -173,7 +184,7 @@ require('subjoyer').setup({
     tracks = {0, 1},       -- Show both track 0 and track 1
     track_label = true,    -- Show "Track 0:", "Track 1:"
   },
-  incline = {
+  nui = {
     separator = ' | ',     -- Separate tracks with " | "
   },
 })
@@ -186,10 +197,11 @@ require('subjoyer').setup({
   subtitle = {
     tracks = 0,
   },
-  incline = {
+  nui = {
     prefix = '',
-    show_timestamp = false,
-    show_track_label = false,
+  },
+  display = {
+    provider = { nui = true, incline = false },
   },
 })
 ```
@@ -198,13 +210,41 @@ require('subjoyer').setup({
 
 ```lua
 require('subjoyer').setup({
-  incline = {
-    options = {
-      window = {
-        placement = {
-          vertical = 'top', -- Above statusline
-        },
+  nui = {
+    window = {
+      placement = {
+        vertical = 'top',   -- Above statusline
       },
+    },
+  },
+})
+```
+
+### Wide subtitle bar (90% of screen width)
+
+```lua
+require('subjoyer').setup({
+  nui = {
+    window = {
+      width = '90%',
+      height = 4,          -- More lines for longer subtitles
+    },
+  },
+})
+```
+
+### Left-aligned compact bar
+
+```lua
+require('subjoyer').setup({
+  nui = {
+    window = {
+      placement = {
+        horizontal = 'left',
+        vertical = 'bottom',
+      },
+      width = 60,          -- Fixed 60 columns
+      margin = { horizontal = 0, vertical = 0 },
     },
   },
 })
@@ -252,6 +292,8 @@ require('subjoyer').setup({
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enabled` | boolean | `true` | Show subtitle bar |
+| `provider.nui` | boolean | `true` | Use nui (persistent floating window) |
+| `provider.incline` | boolean | `false` | Use incline (per-buffer statusline) |
 
 ### `subtitle`
 
@@ -279,21 +321,20 @@ require('subjoyer').setup({
 | `empty_fg` | string | `'#6c7086'` | Empty state color |
 | `error_fg` | string | `'#f38ba8'` | Error message color |
 
-### `incline`
+### `nui`
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `prefix` | string | `'📺 '` | Prefix before subtitles |
 | `suffix` | string | `''` | Suffix after subtitles |
 | `separator` | string | `' • '` | Separator between tracks |
-| `show_timestamp` | boolean | `true` | Show timestamps |
-| `show_track_label` | boolean | `true` | Show track labels |
-| `max_text_length` | number | `100` | Truncate long subtitles |
-| `text_style.bold` | boolean | `false` | Bold subtitle text |
-| `text_style.italic` | boolean | `false` | Italic subtitle text |
-| `text_style.underline` | boolean | `false` | Underline subtitle text |
-| `options.window.placement.horizontal` | string | `'center'` | 'left', 'center', 'right' |
-| `options.window.placement.vertical` | string | `'bottom'` | 'top' or 'bottom' |
+| `window.placement.horizontal` | string | `'center'` | 'left', 'center', 'right' |
+| `window.placement.vertical` | string | `'bottom'` | 'top' or 'bottom' |
+| `window.width` | number/string | `'80%'` | Width in columns or percentage |
+| `window.height` | number | `3` | Height in lines (supports text wrap) |
+| `window.margin.horizontal` | number | `0` | Horizontal margin |
+| `window.margin.vertical` | number | `1` | Vertical margin |
+| `window.zindex` | number | `100` | Window z-index |
 
 ### `behavior`
 
@@ -312,16 +353,20 @@ Python Server (ws_client.py) - Started by Neovim as background job
     ↓ stdout (JSON)
 Neovim Lua Plugin
     ↓ Render & Display
-incline.nvim (Subtitle Bar)
+nui.nvim (Persistent Floating Bar)
 ```
 
 **Non-blocking**: Python server runs as background job, Neovim remains fully responsive.
 
+**nui provider**: Creates a persistent floating window that stays visible across all buffers and windows in your editor session.
+
+**incline provider**: Creates per-buffer statusline bars that only exist while a buffer/window is present.
+
 ## Troubleshooting
 
-### "incline.nvim not found" error
+### "nui.popup not found" error
 
-Install incline.nvim as a dependency (see Installation section).
+Install nui.nvim as a dependency (see Installation section).
 
 ### "Python not found" error
 
@@ -354,7 +399,12 @@ pip install websockets
 
 ### Bar not visible
 
-Check incline.nvim is installed and working. The bar only appears when subtitles are received.
+Check nui.nvim is installed and working. The bar only appears when subtitles are received. If using nui, the window is persistent and should stay visible even when switching buffers.
+
+If the bar was visible but disappeared:
+1. Check if the window was accidentally closed
+2. Run `:SubjoyerToggle` to show/hide
+3. Run `:SubjoyerStart` to restart the plugin
 
 ## Testing
 
@@ -379,4 +429,4 @@ MIT
 
 - Written by Claude (Anthropic) and examined by a human
 - Built for use with [asbplayer-streamer](https://github.com/SanzharKuandyk/asbplayer-subtitle-streamer)
-- Uses [incline.nvim](https://github.com/b0o/incline.nvim) for statusline integration
+- Uses [nui.nvim](https://github.com/MunifTanjim/nui.nvim) for persistent subtitle bar display

@@ -1,119 +1,106 @@
--- lualine integration for subjoyer.nvim
 local M = {}
 
--- Get the renderer to access current subtitle state
-local renderer = require('subjoyer.renderer')
+local display
+local config_mod = require("subjoyer.config")
 
--- Store reference to display module
-local display = nil
-
--- Setup lualine component
-function M.setup(config)
-  -- Check if lualine is available
-  local ok, lualine = pcall(require, 'lualine')
-  if not ok then
-    return false, 'lualine.nvim not found'
-  end
-
-  -- Get display module reference
-  display = require('subjoyer.display')
-
-  return true
-end
-
--- Get current subtitle text for lualine
-function M.get_subtitle()
-  if not display then
-    display = require('subjoyer.display')
-  end
-
-  -- Get current subtitle state from display module
-  local subtitle_state = display.get_state()
-  if not subtitle_state or not subtitle_state.lines or #subtitle_state.lines == 0 then
-    return ''
-  end
-
-  local config = require('subjoyer.config').get()
-  local lualine_cfg = config.lualine
-
-  -- Build text from lines
-  local text_parts = {}
-  for _, line in ipairs(subtitle_state.lines) do
-    if type(line) == 'table' then
-      -- Extract text from highlight groups
-      local line_text = ''
-      for _, segment in ipairs(line) do
-        if type(segment) == 'table' and segment[1] then
-          line_text = line_text .. segment[1]
-        elseif type(segment) == 'string' then
-          line_text = line_text .. segment
-        end
-      end
-      table.insert(text_parts, line_text)
-    elseif type(line) == 'string' then
-      table.insert(text_parts, line)
+-- Setup
+function M.setup()
+    local ok = pcall(require, "lualine")
+    if not ok then
+        return false, "lualine.nvim not found"
     end
-  end
 
-  local text = table.concat(text_parts, ' ')
-
-  -- Truncate if too long
-  local max_length = lualine_cfg.max_length or 80
-  if #text > max_length then
-    text = text:sub(1, max_length - 3) .. '...'
-  end
-
-  -- Add icon if configured
-  if lualine_cfg.show_icon and lualine_cfg.icon then
-    text = lualine_cfg.icon .. ' ' .. text
-  end
-
-  return text
+    display = require("subjoyer.display")
+    return true
 end
 
--- Create lualine component function
+-- Build subtitle text (provider-agnostic)
+local function build_text(lines, cfg)
+    local parts = {}
+
+    for i, line in ipairs(lines) do
+        if i > 1 then
+            table.insert(parts, cfg.lualine.separator or " • ")
+        end
+
+        if line.timestamp and cfg.lualine.show_timestamp then
+            table.insert(parts, line.timestamp .. " ")
+        end
+
+        if line.track_label and cfg.lualine.show_track_label then
+            table.insert(parts, line.track_label .. " ")
+        end
+
+        table.insert(parts, line.text)
+    end
+
+    return table.concat(parts)
+end
+
+-- Public: lualine component
+function M.get_subtitle()
+    if not display then
+        display = require("subjoyer.display")
+    end
+
+    local state = display.get_state()
+    if not state or not state.lines or #state.lines == 0 then
+        return ""
+    end
+
+    local cfg = config_mod.get()
+    local text = build_text(state.lines, cfg)
+
+    -- Truncate
+    local max_len = cfg.lualine.max_length or 80
+    if #text > max_len then
+        text = text:sub(1, max_len - 3) .. "..."
+    end
+
+    -- Icon
+    if cfg.lualine.show_icon and cfg.lualine.icon then
+        text = cfg.lualine.icon .. " " .. text
+    end
+
+    return text
+end
+
+-- Lualine component factory
 function M.component()
-  return {
-    M.get_subtitle,
-    cond = function()
-      -- Only show if plugin is started and there's content
-      local subjoyer = require('subjoyer')
-      return subjoyer.is_started and M.get_subtitle() ~= ''
-    end,
-  }
+    return {
+        function()
+            return M.get_subtitle()
+        end,
+        cond = function()
+            local subjoyer = require("subjoyer")
+            local state = display and display.get_state() or nil
+            return subjoyer.is_started and state and state.lines and #state.lines > 0
+        end,
+    }
 end
 
--- Helper function to inject into lualine config
+-- Inject into existing lualine config
 function M.inject_into_lualine(section)
-  local ok, lualine_config = pcall(require, 'lualine')
-  if not ok then
-    vim.notify('[subjoyer] lualine.nvim not found', vim.log.levels.ERROR)
-    return false
-  end
+    local ok, lualine = pcall(require, "lualine")
+    if not ok then
+        vim.notify("[subjoyer] lualine.nvim not found", vim.log.levels.ERROR)
+        return false
+    end
 
-  -- Get current lualine config
-  local current_config = lualine_config.get_config()
+    local current = lualine.get_config()
+    section = section or "c"
 
-  -- Determine section (default to 'c')
-  section = section or 'c'
-  local section_key = 'lualine_' .. section
+    current.sections = current.sections or {}
+    local key = "lualine_" .. section
+    current.sections[key] = current.sections[key] or {}
 
-  -- Initialize section if needed
-  if not current_config.sections then
-    current_config.sections = {}
-  end
-  if not current_config.sections[section_key] then
-    current_config.sections[section_key] = {}
-  end
+    table.insert(current.sections[key], M.component())
 
-  -- Add our component
-  table.insert(current_config.sections[section_key], M.component())
+    lualine.setup(current)
 
-  -- Update lualine
-  lualine_config.setup(current_config)
+    vim.notify("[subjoyer] Subtitle added to lualine section " .. section, vim.log.levels.INFO)
 
-  vim.notify('[subjoyer] Added to lualine section ' .. section, vim.log.levels.INFO)
-  return true
+    return true
 end
 
 return M
