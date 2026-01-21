@@ -94,12 +94,13 @@ function M.format_incline(data, config)
     return parts
 end
 
-function M.get_position(config)
+function M.get_position(config, height)
     local row
+    local win_height = height or config.nui.window.height
     if config.nui.window.placement.vertical == "top" then
         row = config.nui.window.margin.vertical
     else
-        row = vim.o.lines - vim.o.cmdheight - config.nui.window.height - config.nui.window.margin.vertical
+        row = vim.o.lines - vim.o.cmdheight - win_height - config.nui.window.margin.vertical
     end
     return row
 end
@@ -125,6 +126,15 @@ function M.calculate_size(config)
     end
 
     return width, col
+end
+
+local function calculate_wrapped_lines(text, window_width)
+    if not text or #text == 0 then
+        return 1
+    end
+    local text_width = vim.api.nvim_strwidth(text)
+    local available_width = math.max(window_width - 2, 1)
+    return math.ceil(text_width / available_width)
 end
 
 function M.create_nui_popup(config)
@@ -172,6 +182,35 @@ function M.update_nui_popup(config)
 
     vim.api.nvim_buf_set_lines(M.nui_popup.bufnr, 0, -1, false, { text })
     M.nui_popup:show()
+
+    local resize_opts = {}
+
+    if config.nui.window.auto_resize then
+        local width, _ = M.calculate_size(config)
+        local wrapped_lines = calculate_wrapped_lines(text, width)
+        local height = math.min(math.max(wrapped_lines, config.nui.window.min_height), config.nui.window.max_height)
+
+        resize_opts.height = height
+
+        if config.nui.window.placement.vertical == "bottom" then
+            local new_row = vim.o.lines - vim.o.cmdheight - height - config.nui.window.margin.vertical
+            resize_opts.row = new_row
+        end
+    end
+
+    if next(resize_opts) ~= nil then
+        local _, col = M.calculate_size(config)
+        local full_opts = {
+            relative = "editor",
+            col = col,
+            height = resize_opts.height,
+            row = resize_opts.row,
+        }
+        local ok, err = pcall(vim.api.nvim_win_set_config, M.nui_popup.winid, full_opts)
+        if not ok then
+            vim.notify("[subjoyer] Failed to resize window: " .. err, vim.log.levels.WARN)
+        end
+    end
 end
 
 -- Incline renderer

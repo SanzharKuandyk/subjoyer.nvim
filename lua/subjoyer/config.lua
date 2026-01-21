@@ -85,7 +85,10 @@ M.defaults = {
                 vertical = "bottom", -- "top" | "bottom"
             },
             width = 80, -- width in columns or percentage (e.g., 80 or "80%")
-            height = 2, -- height in lines
+            height = 2, -- default height in lines (used when auto_resize is false)
+            min_height = 1, -- minimum height in lines (when auto_resize is true)
+            max_height = 5, -- maximum height in lines (when auto_resize is true)
+            auto_resize = true, -- auto-adjust height based on wrapped text
             margin = { horizontal = 0, vertical = 1 },
             zindex = 100,
         },
