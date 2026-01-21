@@ -5,6 +5,7 @@ Display live subtitles from [asbplayer-streamer](https://github.com/SanzharKuand
 ## Features
 
 - **✨ Floating Bar Display** - Full-width subtitle bar using nui.nvim (persistent across editor)
+- **📊 Lualine Integration** - Show subtitles in your statusline
 - **🎯 Highly Configurable** - Position, size, colors, tracks, formatting
 - **🔄 Multi-track Support** - Show one or multiple subtitle tracks
 - **🔌 Auto-reconnect** - Handles connection drops gracefully
@@ -14,14 +15,17 @@ Display live subtitles from [asbplayer-streamer](https://github.com/SanzharKuand
 
 ## Display Providers
 
-subjoyer supports two display providers:
+subjoyer supports multiple display options:
 
 | Provider | Persistence | Default Position | Behavior |
 |----------|-------------|------------------|----------|
 | **nui** | Persistent | bottom-center | Floating window stays visible across all buffers and windows |
 | **incline** | Per-buffer | top-right | Only shows when a buffer/window is present |
+| **lualine** | Per-buffer | - | Add subtitle to your lualine statusline |
 
-Both providers can be enabled simultaneously - they use different positions by default to avoid overlap.
+Both nui and incline can be enabled simultaneously - they use different positions by default to avoid overlap.
+
+Lualine is configured separately in your lualine config.
 
 ## Requirements
 
@@ -40,6 +44,7 @@ Both providers can be enabled simultaneously - they use different positions by d
   dependencies = {
     'MunifTanjim/nui.nvim', -- Required for nui display (default)
     'b0o/incline.nvim',     -- Optional: for incline display
+    'nvim-lualine/lualine.nvim', -- Optional: for lualine integration
   },
   config = function()
     require('subjoyer').setup()
@@ -55,6 +60,7 @@ use {
   requires = {
     'MunifTanjim/nui.nvim', -- Required for nui display (default)
     'b0o/incline.nvim',     -- Optional: for incline display
+    'nvim-lualine/lualine.nvim', -- Optional: for lualine integration
   },
   config = function()
     require('subjoyer').setup()
@@ -264,6 +270,19 @@ require('subjoyer').setup({
 })
 ```
 
+### Lualine integration
+
+```lua
+require('lualine').setup({
+  sections = {
+    lualine_c = {
+      require('subjoyer.lualine').component(),
+    },
+  },
+})
+```
+
+Or with custom options:
 ## Configuration Reference
 
 ### `connection`
@@ -344,6 +363,29 @@ require('subjoyer').setup({
 | `window.margin.horizontal` | number | `0` | Horizontal margin |
 | `window.margin.vertical` | number | `1` | Vertical margin |
 | `window.zindex` | number | `50` | Window z-index |
+
+### `lualine`
+
+Lualine integration - add subtitle component to your lualine config.
+
+```lua
+require('lualine').setup({
+  sections = {
+    lualine_c = {
+      require('subjoyer.lualine').component(),
+    },
+  },
+})
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `max_length` | number | `80` | Max text length (truncates with "...") |
+| `show_icon` | boolean | `true` | Show icon prefix |
+| `icon` | string | `'📺 '` | Icon to display |
+| `show_timestamp` | boolean/nil | `nil` | Override global `show_timestamp` |
+| `track_label` | boolean/nil | `nil` | Override global `track_label` |
+| `separator` | string | `' • '` | Separator between tracks |
 
 ### `behavior`
 

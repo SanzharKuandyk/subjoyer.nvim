@@ -175,10 +175,13 @@ M.defaults = {
     lualine = {
         enabled = false, -- Enable lualine component
         section = "c", -- Which section to use (a, b, c, x, y, z)
-        format = "{text}", -- Format string
         max_length = 80, -- Max text length
         show_icon = true, -- Show icon prefix
         icon = "📺", -- Icon to use
+
+        -- Override global subtitle settings
+        show_timestamp = nil, -- nil = use global; true/false = override
+        track_label = nil, -- nil = use global; true/false = override
     },
 }
 
