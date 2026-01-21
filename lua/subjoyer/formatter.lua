@@ -61,7 +61,7 @@ local function filter_tracks(lines, track_config)
 end
 
 -- Main formatter (provider-agnostic)
-function M.format(data, config)
+function M.format(data, config, target_provider)
     if not data or not data.subtitle then
         return {}
     end
@@ -84,6 +84,14 @@ function M.format(data, config)
         return {}
     end
 
+    -- Determine truncation based on target provider
+    local max_len = nil
+    if target_provider == "nui" then
+        max_len = config.nui.subtitle.max_text_length
+    elseif target_provider == "incline" then
+        max_len = config.incline.max_text_length
+    end
+
     local result = {}
 
     for _, line in ipairs(filtered) do
@@ -94,8 +102,8 @@ function M.format(data, config)
         end
 
         if text ~= "" then
-            if config.incline.max_text_length and #text > config.incline.max_text_length then
-                text = text:sub(1, config.incline.max_text_length) .. "..."
+            if max_len and #text > max_len then
+                text = text:sub(1, max_len) .. "..."
             end
 
             local track_num = normalize_track(line)

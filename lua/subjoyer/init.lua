@@ -4,7 +4,6 @@ local M = {}
 local config = require("subjoyer.config")
 local websocket = require("subjoyer.websocket")
 local display = require("subjoyer.display")
-local formatter = require("subjoyer.formatter")
 local asbplayer = require("subjoyer.asbplayer")
 
 -- Plugin state
@@ -175,11 +174,8 @@ function M.handle_subtitle(data)
         return
     end
 
-    -- Format subtitle
-    local formatted_lines = formatter.format(data, cfg)
-
-    -- Update display
-    display.update(formatted_lines, cfg)
+    -- Update display (display handles formatting per provider)
+    display.update(data, cfg)
 end
 
 -- Start receiving subtitles

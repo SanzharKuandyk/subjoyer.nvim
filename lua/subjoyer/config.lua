@@ -78,7 +78,7 @@ M.defaults = {
             prefix = "📺 ",
             suffix = "",
             separator = " • ",
-            max_text_length = 100,
+            max_text_length = nil, -- nil = no truncation, text will wrap
 
             text_style = {
                 bold = false,
@@ -121,7 +121,7 @@ M.defaults = {
         separator = " • ",
         show_timestamp = true,
         show_track_label = true,
-        max_text_length = 100, -- truncate long subtitles
+        max_text_length = nil, -- nil = no truncation, text will wrap
 
         -- Text styling
         text_style = {

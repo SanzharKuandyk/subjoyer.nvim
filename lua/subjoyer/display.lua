@@ -5,38 +5,48 @@ M.current_subtitle = nil
 M.is_visible = true
 M.nui_popup = nil
 
-function M.build_model(config)
-    if not M.is_visible or not config.display.enabled then
+local function build_model_from_data(data, config)
+    if not data or not data.subtitle then
         return nil
     end
 
-    local subtitle = M.current_subtitle
-    if not subtitle or not subtitle.lines or #subtitle.lines == 0 then
-        if config.subtitle.empty_placeholder ~= "" then
-            return {
-                {
-                    text = config.subtitle.empty_placeholder,
-                    track_num = 0,
-                },
-            }
-        end
-        return nil
-    end
-
+    local subtitle = data.subtitle
     local items = {}
-    for _, line in ipairs(subtitle.lines) do
-        table.insert(items, {
-            timestamp = line.timestamp,
-            track_label = line.track_label,
-            text = line.text,
-            track_num = line.track_num or 0,
-        })
+
+    local raw_lines = subtitle.lines or {}
+    if #raw_lines == 0 and subtitle.text and subtitle.text ~= "" then
+        raw_lines = { { text = subtitle.text, track = 0 } }
+    end
+
+    if #raw_lines == 0 then
+        return nil
+    end
+
+    for _, line in ipairs(raw_lines) do
+        local track_num = line.track_num or line.track or 0
+        local text = line.text or ""
+
+        if config.subtitle.trim then
+            text = text:gsub("^%s*(.-)%s*$", "%1")
+        end
+
+        if text ~= "" then
+            table.insert(items, {
+                text = text,
+                track_num = track_num,
+            })
+        end
+    end
+
+    if #items == 0 then
+        return nil
     end
 
     return items
 end
 
-function M.format_subtitle(config, model)
+function M.format_nui(data, config)
+    local model = build_model_from_data(data, config)
     if not model then
         return nil
     end
@@ -51,20 +61,34 @@ function M.format_subtitle(config, model)
         if i > 1 then
             table.insert(parts, config.nui.subtitle.separator)
         end
-
-        if item.timestamp and config.subtitle.show_timestamp then
-            table.insert(parts, item.timestamp)
-        end
-
-        if item.track_label and config.subtitle.track_label then
-            table.insert(parts, "Track " .. item.track_num .. ":")
-        end
-
         table.insert(parts, item.text)
     end
 
     if config.nui.subtitle.suffix ~= "" then
         table.insert(parts, config.nui.subtitle.suffix)
+    end
+
+    return table.concat(parts, " ")
+end
+
+function M.format_incline(data, config)
+    local model = build_model_from_data(data, config)
+    if not model then
+        return nil
+    end
+
+    local parts = {}
+
+    for i, item in ipairs(model) do
+        if i > 1 then
+            table.insert(parts, config.incline.separator)
+        end
+
+        local text = item.text
+        if config.incline.max_text_length and #text > config.incline.max_text_length then
+            text = text:sub(1, config.incline.max_text_length) .. "..."
+        end
+        table.insert(parts, text)
     end
 
     return parts
@@ -139,15 +163,12 @@ function M.update_nui_popup(config)
         return
     end
 
-    local model = M.build_model(config)
-    local parts = M.format_subtitle(config, model)
+    local text = M.format_nui(M.current_subtitle, config)
 
-    if not parts or not M.is_visible or #parts == 0 then
+    if not text or not M.is_visible or #text == 0 then
         M.nui_popup:hide()
         return
     end
-
-    local text = table.concat(parts, " ")
 
     vim.api.nvim_buf_set_lines(M.nui_popup.bufnr, 0, -1, false, { text })
     M.nui_popup:show()
@@ -156,86 +177,47 @@ end
 -- Incline renderer
 function M.render_incline(config)
     return function()
-        local model = M.build_model(config)
-        if not model then
+        local parts = M.format_incline(M.current_subtitle, config)
+        if not parts then
             return nil
         end
 
-        local parts = {}
+        local result = {}
 
-        -- Left padding
-        table.insert(parts, { " ", guibg = config.colors.bg })
+        table.insert(result, { " ", guibg = config.colors.bg })
 
-        -- Prefix
         if config.incline.prefix ~= "" then
-            table.insert(parts, {
+            table.insert(result, {
                 config.incline.prefix,
                 guifg = config.colors.prefix_fg,
                 guibg = config.colors.bg,
             })
         end
 
-        for i, item in ipairs(model) do
+        for i, text in ipairs(parts) do
             if i > 1 then
-                table.insert(parts, {
+                table.insert(result, {
                     config.incline.separator,
                     guifg = config.colors.separator_fg,
                     guibg = config.colors.bg,
                 })
             end
 
-            -- Timestamp
-            if item.timestamp and config.incline.show_timestamp then
-                table.insert(parts, {
-                    item.timestamp .. " ",
-                    guifg = config.colors.timestamp_fg,
-                    guibg = config.colors.bg,
-                })
-            end
-
-            -- Track label
-            if item.track_label and config.incline.show_track_label then
-                local label_fg = config.colors["track_" .. item.track_num .. "_label_fg"]
-                    or config.colors.track_label_fg
-
-                table.insert(parts, {
-                    item.track_label .. " ",
-                    guifg = label_fg,
-                    guibg = config.colors.bg,
-                })
-            end
-
-            -- Subtitle text
-            local subtitle_fg = config.colors["track_" .. item.track_num .. "_fg"] or config.colors.subtitle_fg
-
-            local text_part = {
-                item.text,
-                guifg = subtitle_fg,
+            table.insert(result, {
+                text,
+                guifg = config.colors.subtitle_fg,
                 guibg = config.colors.bg,
-            }
-
-            local styles = {}
-            for style, enabled in pairs(config.incline.text_style) do
-                if enabled then
-                    table.insert(styles, style)
-                end
-            end
-            if #styles > 0 then
-                text_part.gui = table.concat(styles, ",")
-            end
-
-            table.insert(parts, text_part)
+            })
         end
 
-        -- Right padding
-        table.insert(parts, { " ", guibg = config.colors.bg })
+        table.insert(result, { " ", guibg = config.colors.bg })
 
-        return parts
+        return result
     end
 end
 
-function M.update(formatted_lines, config)
-    M.current_subtitle = { lines = formatted_lines or {} }
+function M.update(data, config)
+    M.current_subtitle = data
 
     if config.display.provider.incline then
         M.refresh()
