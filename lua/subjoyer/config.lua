@@ -15,7 +15,7 @@ M.defaults = {
     -- Display settings
     display = {
         enabled = true,
-        provider = { nui = true, incline = true }, -- display providers
+        provider = { nui = true, incline = false }, -- display providers
     },
 
     -- Subtitle filtering and formatting
