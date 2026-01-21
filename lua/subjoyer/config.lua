@@ -76,6 +76,10 @@ M.defaults = {
             suffix = "",
             separator = " • ",
             max_text_length = nil, -- nil = no truncation, text will wrap
+
+            -- Override global subtitle settings per provider
+            show_timestamp = nil, -- nil = use global; true/false = override
+            track_label = nil, -- nil = use global; true/false = override
         },
 
         -- Window options
@@ -96,13 +100,15 @@ M.defaults = {
 
     -- Incline.nvim integration
     incline = {
-        -- Display options
+        -- Subtitle display options
         prefix = "📺 ",
         suffix = "",
         separator = " • ",
-        show_timestamp = true,
-        show_track_label = true,
         max_text_length = nil, -- nil = no truncation, text will wrap
+
+        -- Override global subtitle settings per provider
+        show_timestamp = nil, -- nil = use global; true/false = override
+        track_label = nil, -- nil = use global; true/false = override
 
         -- Text styling
         text_style = {

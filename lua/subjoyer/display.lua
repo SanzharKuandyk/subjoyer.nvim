@@ -45,11 +45,23 @@ local function build_model_from_data(data, config)
     return items
 end
 
+local function get_effective_setting(provider_val, global_val)
+    if provider_val ~= nil then
+        return provider_val
+    end
+    return global_val
+end
+
 function M.format_nui(data, config)
     local model = build_model_from_data(data, config)
     if not model then
         return nil
     end
+
+    local video = data.video or {}
+
+    local show_timestamp = get_effective_setting(config.nui.subtitle.show_timestamp, config.subtitle.show_timestamp)
+    local show_track_label = get_effective_setting(config.nui.subtitle.track_label, config.subtitle.track_label)
 
     local parts = {}
 
@@ -61,6 +73,17 @@ function M.format_nui(data, config)
         if i > 1 then
             table.insert(parts, config.nui.subtitle.separator)
         end
+
+        if show_timestamp and video.currentTime then
+            local minutes = math.floor(video.currentTime / 60)
+            local secs = math.floor(video.currentTime % 60)
+            table.insert(parts, string.format("[%02d:%02d]", minutes, secs))
+        end
+
+        if show_track_label then
+            table.insert(parts, string.format("Track %d:", item.track_num))
+        end
+
         table.insert(parts, item.text)
     end
 
@@ -77,11 +100,25 @@ function M.format_incline(data, config)
         return nil
     end
 
+    local video = data.video or {}
+    local show_timestamp = get_effective_setting(config.incline.show_timestamp, config.subtitle.show_timestamp)
+    local show_track_label = get_effective_setting(config.incline.track_label, config.subtitle.track_label)
+
     local parts = {}
 
     for i, item in ipairs(model) do
         if i > 1 then
             table.insert(parts, config.incline.separator)
+        end
+
+        if show_timestamp and video.currentTime then
+            local minutes = math.floor(video.currentTime / 60)
+            local secs = math.floor(video.currentTime % 60)
+            table.insert(parts, string.format("[%02d:%02d]", minutes, secs))
+        end
+
+        if show_track_label then
+            table.insert(parts, string.format("Track %d:", item.track_num))
         end
 
         local text = item.text
