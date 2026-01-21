@@ -15,8 +15,7 @@ M.defaults = {
     -- Display settings
     display = {
         enabled = true,
-        provider = { nui = true, incline = false }, -- display providers
-        position = "bottom", -- in case couple providers enabled can override this inside provider's own config
+        provider = { nui = true, incline = true }, -- display providers
     },
 
     -- Subtitle filtering and formatting
@@ -24,12 +23,10 @@ M.defaults = {
         -- Track selection
         -- Tracks are just numbers (0, 1, 2...) - no inherent meaning
         tracks = 0, -- 0, 'all', or array {0, 1, 2}
-        max_lines = 5,
 
         -- Formatting
         show_timestamp = true,
         timestamp_format = "[%M:%S]", -- MM:SS format
-        separator = "\n", -- separator between multiple tracks
         track_label = true, -- show "Track 0:", "Track 1:", etc.
 
         -- Text processing
@@ -79,12 +76,6 @@ M.defaults = {
             suffix = "",
             separator = " • ",
             max_text_length = nil, -- nil = no truncation, text will wrap
-
-            text_style = {
-                bold = false,
-                italic = false,
-                underline = false,
-            },
         },
 
         -- Window options
@@ -96,20 +87,7 @@ M.defaults = {
             width = 80, -- width in columns or percentage (e.g., 80 or "80%")
             height = 2, -- height in lines
             margin = { horizontal = 0, vertical = 1 },
-            padding = { left = 2, right = 2 },
             zindex = 100,
-        },
-
-        -- nui Popup options
-        popup = {
-            enter = false,
-            focusable = false,
-            relative = "editor",
-            border = "none",
-            win_options = {
-                wrap = true,
-                winhighlight = "Normal:SubjoyerNormal,FloatBorder:SubjoyerBorder",
-            },
         },
     },
 
@@ -134,8 +112,8 @@ M.defaults = {
         options = {
             window = {
                 placement = {
-                    horizontal = "center",
-                    vertical = "bottom", -- 'top' = above statusline, 'bottom' = below statusline
+                    horizontal = "right", -- "left" | "center" | "right" (default right to avoid overlap with nui)
+                    vertical = "top", -- "top" = above statusline, "bottom" = below statusline
                 },
                 margin = { horizontal = 0, vertical = 1 },
                 padding = { left = 2, right = 2 },
@@ -215,25 +193,6 @@ end
 
 -- Validate configuration
 local function validate_config(config)
-    -- Validate position
-    local valid_positions = { "top", "bottom", "left", "right", "center" }
-    if not vim.tbl_contains(valid_positions, config.display.position) then
-        vim.notify(string.format('Invalid position: %s. Using "bottom".', config.display.position), vim.log.levels.WARN)
-        config.display.position = "bottom"
-    end
-
-    -- Validate relative
-    local valid_relative = { "editor", "win", "cursor" }
-    if not vim.tbl_contains(valid_relative, config.display.relative) then
-        config.display.relative = "editor"
-    end
-
-    -- Validate border
-    local valid_borders = { "none", "single", "double", "rounded", "solid", "shadow" }
-    if not vim.tbl_contains(valid_borders, config.display.border) then
-        config.display.border = "rounded"
-    end
-
     -- Validate tracks (must be number, string 'all', or table)
     local tracks = config.subtitle.tracks
     if type(tracks) ~= "number" and type(tracks) ~= "table" and tracks ~= "all" then
