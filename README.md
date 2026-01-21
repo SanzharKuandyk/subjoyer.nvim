@@ -16,12 +16,12 @@ Display live subtitles from [asbplayer-streamer](https://github.com/SanzharKuand
 
 subjoyer supports two display providers:
 
-| Provider | Persistence | Behavior |
-|----------|-------------|----------|
-| **nui** (default) | Persistent | Floating window stays visible across all buffers and windows |
-| **incline** | Per-buffer | Only shows when a buffer/window is present |
+| Provider | Persistence | Default Position | Behavior |
+|----------|-------------|------------------|----------|
+| **nui** | Persistent | bottom-center | Floating window stays visible across all buffers and windows |
+| **incline** | Per-buffer | top-right | Only shows when a buffer/window is present |
 
-Choose **nui** if you want the subtitle bar always visible at the screen edge. Choose **incline** if you prefer the bar to attach to individual window statuslines.
+Both providers can be enabled simultaneously - they use different positions by default to avoid overlap.
 
 ## Requirements
 
@@ -35,8 +35,7 @@ Choose **nui** if you want the subtitle bar always visible at the screen edge. C
 
 ### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 
-```lua
-{
+```lua {
   'SanzharKuandyk/subjoyer.nvim',
   dependencies = {
     'MunifTanjim/nui.nvim', -- Required for nui display (default)
@@ -89,13 +88,12 @@ Configure the extension to use **WebSocket** transport on **port 8767** (default
 require('subjoyer').setup()
 ```
 
-The subtitle bar will appear at the bottom (below your statusline) when subtitles are received.
+The nui subtitle bar will appear at the bottom-center when subtitles are received.
 
 #### Custom configuration
 
 ```lua
 require('subjoyer').setup({
-  -- Connection settings
   connection = {
     host = 'localhost',
     port = 8767,
@@ -104,21 +102,18 @@ require('subjoyer').setup({
     max_reconnects = 3,
   },
 
-  -- Display settings
   display = {
     enabled = true,
-    provider = { nui = true, incline = false }, -- nui (persistent) or incline (per-buffer)
+    provider = { nui = true, incline = false },
   },
 
-  -- Subtitle settings
   subtitle = {
     tracks = 0,              -- Show track 0 only (or 'all', or {0,1})
-    show_timestamp = true,
-    track_label = true,
+    show_timestamp = true,   -- Show [MM:SS] prefix
+    track_label = true,      -- Show "Track 0:", "Track 1:", etc.
     trim = true,
   },
 
-  -- Colors (customize to match your theme)
   colors = {
     bg = '#1e1e2e',
     subtitle_fg = '#cdd6f4',
@@ -128,25 +123,26 @@ require('subjoyer').setup({
     prefix_fg = '#a6e3a1',
   },
 
-  -- nui.nvim window options (persistent across editor)
   nui = {
     prefix = '📺 ',
+    suffix = '',
     separator = ' • ',
 
-    -- Window position and size
     window = {
       placement = {
-        horizontal = 'center', -- 'left', 'center', 'right'
-        vertical = 'bottom',   -- 'top', 'bottom'
+        horizontal = 'center',
+        vertical = 'bottom',
       },
-      width = '80%',           -- columns or "80%" of screen width
-      height = 3,              -- height in lines (supports text wrapping)
+      width = 80,            -- columns or "80%" of screen width
+      height = 2,            -- default height (when auto_resize is false)
+      auto_resize = true,    -- auto-adjust height based on wrapped text
+      min_height = 1,        -- minimum height in lines
+      max_height = 5,        -- maximum height in lines
       margin = { horizontal = 0, vertical = 1 },
       zindex = 100,
     },
   },
 
-  -- Behavior
   behavior = {
     auto_start = false,
     hide_on_insert = false,
@@ -164,7 +160,7 @@ require('subjoyer').setup({
 :SubjoyerStop            " Stop and cleanup
 :SubjoyerToggle          " Toggle on/off
 :SubjoyerStatus          " Show connection status
-:SubjoyerMineAnki        " Mine this line via absplayer's AnkiConnect (is not working yet)
+:SubjoyerMineAnki        " Mine this line via absplayer's AnkiConnect
 ```
 
 ### Workflow
@@ -176,58 +172,75 @@ require('subjoyer').setup({
 
 ## Configuration Examples
 
-### Show multiple tracks
+### Enable both providers
 
 ```lua
 require('subjoyer').setup({
-  subtitle = {
-    tracks = {0, 1},       -- Show both track 0 and track 1
-    track_label = true,    -- Show "Track 0:", "Track 1:"
-  },
-  nui = {
-    separator = ' | ',     -- Separate tracks with " | "
-  },
-})
-```
-
-### Clean minimal display (no labels, no timestamp)
-
-```lua
-require('subjoyer').setup({
-  subtitle = {
-    tracks = 0,
-  },
-  nui = {
-    prefix = '',
-  },
   display = {
-    provider = { nui = true, incline = false },
+    provider = { nui = true, incline = true },
+  },
+  nui = {
+    window = {
+      placement = { vertical = 'bottom' },  -- nui stays at bottom
+    },
+  },
+  incline = {
+    window = {
+      placement = { horizontal = 'right', vertical = 'top' },  -- incline at top-right
+    },
   },
 })
 ```
 
-### Position at top (above statusline)
+### Different timestamp settings per provider
+
+```lua
+require('subjoyer').setup({
+  subtitle = { show_timestamp = true },  -- global default
+  nui = { show_timestamp = true },       -- nui shows timestamp
+  incline = { show_timestamp = false },  -- incline hides timestamp
+})
+```
+
+### Auto-resize height configuration
+
+```lua
+require('subjoyer').setup({
+  nui = {
+    window = {
+      auto_resize = true,
+      min_height = 1,
+      max_height = 10,  -- allow taller windows for long subtitles
+    },
+  },
+})
+```
+
+### Custom colors
+
+```lua
+require('subjoyer').setup({
+  colors = {
+    bg = '#282c34',
+    subtitle_fg = '#abb2bf',
+    timestamp_fg = '#61afef',
+    track_label_fg = '#e5c07b',
+    separator_fg = '#5c6370',
+    prefix_fg = '#98c379',
+  },
+})
+```
+
+### Position nui at top
 
 ```lua
 require('subjoyer').setup({
   nui = {
     window = {
       placement = {
-        vertical = 'top',   -- Above statusline
+        vertical = 'top',
+        horizontal = 'center',
       },
-    },
-  },
-})
-```
-
-### Wide subtitle bar (90% of screen width)
-
-```lua
-require('subjoyer').setup({
-  nui = {
-    window = {
-      width = '90%',
-      height = 4,          -- More lines for longer subtitles
     },
   },
 })
@@ -238,39 +251,15 @@ require('subjoyer').setup({
 ```lua
 require('subjoyer').setup({
   nui = {
+    prefix = '',
     window = {
       placement = {
         horizontal = 'left',
         vertical = 'bottom',
       },
-      width = 60,          -- Fixed 60 columns
+      width = 60,
       margin = { horizontal = 0, vertical = 0 },
     },
-  },
-})
-```
-
-### Custom colors (match your theme)
-
-```lua
-require('subjoyer').setup({
-  colors = {
-    bg = '#282c34',           -- Background
-    subtitle_fg = '#abb2bf',  -- Subtitle text
-    timestamp_fg = '#61afef', -- Timestamp [MM:SS]
-    track_label_fg = '#e5c07b', -- Track labels
-    separator_fg = '#5c6370', -- Separator between tracks
-    prefix_fg = '#98c379',    -- Prefix icon
-  },
-})
-```
-
-### Auto-start on launch
-
-```lua
-require('subjoyer').setup({
-  behavior = {
-    auto_start = true,  -- Starts automatically when you open Neovim
   },
 })
 ```
@@ -295,15 +284,13 @@ require('subjoyer').setup({
 | `provider.nui` | boolean | `true` | Use nui (persistent floating window) |
 | `provider.incline` | boolean | `false` | Use incline (per-buffer statusline) |
 
-### `subtitle`
+### `subtitle` (global)
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `tracks` | number/string/table | `0` | Track filter: 0, 'all', or {0,1,2} |
-| `max_lines` | number | `5` | Max subtitle lines to display |
 | `show_timestamp` | boolean | `true` | Show [MM:SS] prefix |
-| `timestamp_format` | string | `'[%M:%S]'` | Timestamp format |
-| `track_label` | boolean | `true` | Show "Track 0:", "Track 1:", etc. |
+| `track_label` | boolean | `true` | Show "Track 0:", etc. |
 | `trim` | boolean | `true` | Trim whitespace |
 | `empty_placeholder` | string | `''` | Text when no subtitle active |
 
@@ -328,13 +315,35 @@ require('subjoyer').setup({
 | `prefix` | string | `'📺 '` | Prefix before subtitles |
 | `suffix` | string | `''` | Suffix after subtitles |
 | `separator` | string | `' • '` | Separator between tracks |
+| `subtitle.show_timestamp` | boolean/nil | `nil` | Override global `show_timestamp` |
+| `subtitle.track_label` | boolean/nil | `nil` | Override global `track_label` |
+| `subtitle.max_text_length` | number/nil | `nil` | Truncate text (nil = no limit) |
 | `window.placement.horizontal` | string | `'center'` | 'left', 'center', 'right' |
 | `window.placement.vertical` | string | `'bottom'` | 'top' or 'bottom' |
-| `window.width` | number/string | `'80%'` | Width in columns or percentage |
-| `window.height` | number | `3` | Height in lines (supports text wrap) |
+| `window.width` | number/string | `80` | Width in columns or "80%" |
+| `window.height` | number | `2` | Default height in lines |
+| `window.auto_resize` | boolean | `true` | Auto-adjust height based on text |
+| `window.min_height` | number | `1` | Minimum height in lines |
+| `window.max_height` | number | `5` | Maximum height in lines |
 | `window.margin.horizontal` | number | `0` | Horizontal margin |
 | `window.margin.vertical` | number | `1` | Vertical margin |
 | `window.zindex` | number | `100` | Window z-index |
+
+### `incline`
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `prefix` | string | `'📺 '` | Prefix before subtitles |
+| `suffix` | string | `''` | Suffix after subtitles |
+| `separator` | string | `' • '` | Separator between tracks |
+| `show_timestamp` | boolean/nil | `nil` | Override global `show_timestamp` |
+| `track_label` | boolean/nil | `nil` | Override global `track_label` |
+| `max_text_length` | number/nil | `nil` | Truncate text (nil = no limit) |
+| `window.placement.horizontal` | string | `'right'` | 'left', 'center', 'right' |
+| `window.placement.vertical` | string | `'top'` | 'top' or 'bottom' |
+| `window.margin.horizontal` | number | `0` | Horizontal margin |
+| `window.margin.vertical` | number | `1` | Vertical margin |
+| `window.zindex` | number | `50` | Window z-index |
 
 ### `behavior`
 
@@ -427,6 +436,5 @@ MIT
 
 ## Credits
 
-- Written by Claude (Anthropic) and examined by a human
 - Built for use with [asbplayer-streamer](https://github.com/SanzharKuandyk/asbplayer-subtitle-streamer)
 - Uses [nui.nvim](https://github.com/MunifTanjim/nui.nvim) for persistent subtitle bar display
